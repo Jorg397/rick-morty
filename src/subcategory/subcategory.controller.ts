@@ -36,7 +36,8 @@ export class SubcategoryController {
   @Put(':id')
   update(
     @Param('id') id: string,
-    @Body(new ValidationPipe()) updateSubcategoryDto: UpdateSubcategoryDto,
+    @Body(new ValidationPipe())
+    updateSubcategoryDto: UpdateSubcategoryDto,
   ) {
     return this.subcategoryService.update(id, updateSubcategoryDto)
   }

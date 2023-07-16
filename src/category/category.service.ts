@@ -16,9 +16,7 @@ export class CategoryService {
 
   async findAll(): Promise<Category[]> {
     return await this.prisma.category.findMany({
-      select: {
-        id: true,
-        category: true,
+      include: {
         subcategories: true,
       },
     })
@@ -28,6 +26,9 @@ export class CategoryService {
     const category = await this.prisma.category.findUnique({
       where: {
         id: id,
+      },
+      include: {
+        subcategories: true,
       },
     })
 
