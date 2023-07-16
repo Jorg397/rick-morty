@@ -10,14 +10,18 @@ export class CategoryService {
 
   async create(createCategoryDto: CreateCategoryDto): Promise<Category> {
     return await this.prisma.category.create({
-      data: {
-        category: createCategoryDto.name,
-      },
+      data: createCategoryDto,
     })
   }
 
   async findAll(): Promise<Category[]> {
-    return await this.prisma.category.findMany()
+    return await this.prisma.category.findMany({
+      select: {
+        id: true,
+        category: true,
+        subcategories: true,
+      },
+    })
   }
 
   async findOne(id: string) {
