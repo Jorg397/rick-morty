@@ -87,7 +87,7 @@ model Location {
   originalCharacters Character[] @relation(name: "origin")
 
   residentIDs String[] 
-  originalIDs String   
+  originalIDs String[]   
 }
 
 model Participation {

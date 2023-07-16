@@ -22,8 +22,6 @@ export class StatustypeService {
   }
 
   async findOne(id: string) {
-    console.log(id)
-
     const statustype = await this.prisma.statusType.findUnique({
       where: {
         id,
