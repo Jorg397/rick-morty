@@ -1,0 +1,102 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model StatusType {
+  id       String   @id @default(uuid()) @map("_id") 
+  type     String
+  statuses Status[]
+}
+
+model Status {
+  id     String      @id @default(uuid()) @map("_id") 
+  type   StatusType @relation(fields: [typeId], references: [id])
+  status String
+
+  typeId String 
+
+  characters Character[]
+}
+
+model Category {
+  id            String          @id @default(uuid()) @map("_id") 
+  category      String
+  subcategories SubCategory[]
+}
+
+model SubCategory {
+  id         String     @id @default(uuid()) @map("_id") 
+  category   Category @relation(fields: [categoryId], references: [id])
+  subcategory String
+  categoryId String     
+}
+
+model Specie {
+  id     String @id @default(uuid()) @map("_id") 
+  specie String
+
+  character     Character[] @relation()
+  charactersIDs String[]     
+}
+
+model Character {
+  id             String           @id @default(uuid()) @map("_id") 
+  name           String
+  status         Status           @relation(fields: [statusId], references: [id])
+  species        Specie          @relation(fields: [specieId], references: [id])
+  type           String
+  gender         String
+  image          String
+  episodes       Episode[]       @relation(fields: [episodeIDs], references: [id])
+  location       Location        @relation(name: "location", fields: [locationId], references: [id])
+  origin         Location        @relation(name: "origin", fields: [originId], references: [id])
+  participations Participation[] @relation()
+
+  statusId   String   
+  specieId  String 
+  episodeIDs String[] 
+  locationId String   
+  originId   String   
+}
+
+model Episode {
+  id             String           @id @default(uuid()) @map("_id") 
+  name           String
+  airDate        String
+  episode        String
+  participations Participation[] @relation()
+
+  characters   Character[] @relation(fields: [characterIDs], references: [id])
+  characterIDs String[]     
+}
+
+model Location {
+  id                 String       @id @default(uuid()) @map("_id") 
+  name               String       @unique
+  type               String
+  dimension          String
+  residents          Character[] @relation(name: "location")
+  originalCharacters Character[] @relation(name: "origin")
+
+  residentIDs String[] 
+  originalIDs String   
+}
+
+model Participation {
+  id        String     @id @default(uuid()) @map("_id") 
+  character Character @relation(fields: [characterId], references: [id])
+  episode   Episode   @relation(fields: [episodeId], references: [id])
+  start     String
+  end       String
+
+  characterId String 
+  episodeId   String 
+}
