@@ -6,9 +6,22 @@ import { AllCharacters, CharacterAPI } from '../models/character_api.model'
 export class CharactersApiService {
   private charactersApiUrl = 'https://rickandmortyapi.com/api/character'
 
-  async getAllCharacters(): Promise<AllCharacters> {
+  async getAllCharacters(): Promise<CharacterAPI[]> {
+    const characters = []
+
     const { data } = await axios.get<AllCharacters>(this.charactersApiUrl)
-    return data
+    characters.push(...data.results)
+
+    const pages = data.info.pages
+
+    for (let i = 2; i <= pages; i++) {
+      const { data } = await axios.get<AllCharacters>(
+        `${this.charactersApiUrl}?page=${i}`,
+      )
+      characters.push(...data.results)
+    }
+
+    return characters
   }
 
   async getCharacterById(id: number): Promise<CharacterAPI> {

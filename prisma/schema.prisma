@@ -12,70 +12,73 @@ datasource db {
 
 model StatusType {
   id       String   @id @default(uuid()) @map("_id") 
-  type     String
+  type     String @unique
   statuses Status[]
 }
 
 model Status {
   id     String      @id @default(uuid()) @map("_id") 
   type   StatusType @relation(fields: [typeId], references: [id])
-  status String
+  status String @unique
 
   typeId String 
 
-  characters Character[]
+  characters Character[] @relation()
+  episodes Episode[] @relation()
 }
 
 model Category {
   id            String          @id @default(uuid()) @map("_id") 
-  category      String
+  category      String @unique
   subcategories SubCategory[]
 }
 
 model SubCategory {
   id         String     @id @default(uuid()) @map("_id") 
   category   Category @relation(fields: [categoryId], references: [id])
-  subcategory String
-  categoryId String     
+  subcategory String @unique
+  categoryId String
+
+  characters Character[] @relation()  
+  episodes Episode[] @relation()   
 }
 
-model Specie {
-  id     String @id @default(uuid()) @map("_id") 
-  specie String
-
-  character     Character[] @relation()
-  charactersIDs String[]     
-}
 
 model Character {
   id             String           @id @default(uuid()) @map("_id") 
   name           String
-  status         Status           @relation(fields: [statusId], references: [id])
-  species        Specie          @relation(fields: [specieId], references: [id])
+  status         Status          @relation(fields: [statusId], references: [id])
+  specie         SubCategory @relation(fields: [specieId], references: [id])
   type           String
   gender         String
   image          String
+  apiId       Int?  @unique
   episodes       Episode[]       @relation(fields: [episodeIDs], references: [id])
   location       Location        @relation(name: "location", fields: [locationId], references: [id])
   origin         Location        @relation(name: "origin", fields: [originId], references: [id])
   participations Participation[] @relation()
 
   statusId   String   
-  specieId  String 
   episodeIDs String[] 
   locationId String   
-  originId   String   
+  originId   String
+  specieId String   
 }
 
 model Episode {
   id             String           @id @default(uuid()) @map("_id") 
-  name           String
+  name           String @unique
   airDate        String
   episode        String
+  season SubCategory @relation(fields: [seasonId], references: [id])
+  duration       Int
+  status         Status          @relation(fields: [statusId], references: [id])
   participations Participation[] @relation()
 
   characters   Character[] @relation(fields: [characterIDs], references: [id])
-  characterIDs String[]     
+  characterIDs String[]
+  seasonId  String
+  statusId   String 
 }
 
 model Location {

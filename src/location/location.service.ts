@@ -13,54 +13,71 @@ export class LocationService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(createLocationDto: CreateLocationDto): Promise<Location> {
-    const findlocation = await this.prisma.location.findUnique({
+    const existingLocation = await this.prisma.location.findUnique({
       where: {
         name: createLocationDto.name,
       },
     })
 
-    if (findlocation)
+    if (existingLocation) {
       throw new ConflictException('Location with this name already exists')
+    }
 
-    return await this.prisma.location.create({
+    const newLocation = await this.prisma.location.create({
       data: {
         name: createLocationDto.name,
         dimension: createLocationDto.dimension,
         type: createLocationDto.type,
-        residentIDs: createLocationDto?.residentIDs,
-        originalIDs: createLocationDto?.originalIDs,
+        residentIDs: createLocationDto.residentIDs,
+        originalIDs: createLocationDto.originalIDs,
       },
     })
+
+    return newLocation
   }
 
   async findAll(): Promise<Location[]> {
-    return await this.prisma.location.findMany()
+    const locations = await this.prisma.location.findMany({
+      include: {
+        residents: true,
+        originalCharacters: true,
+      },
+    })
+    return locations
   }
 
   async findOne(id: string): Promise<Location> {
-    const findlocation = await this.prisma.location.findUnique({
+    const findLocation = await this.prisma.location.findUnique({
       where: {
         id,
       },
+      include: {
+        residents: true,
+        originalCharacters: true,
+      },
     })
-
-    if (!findlocation) {
-      throw new NotFoundException('Location not exists')
+    if (!findLocation) {
+      throw new NotFoundException('Location does not exist')
     }
-
-    return findlocation
+    return findLocation
   }
 
   async update(
     id: string,
     updateLocationDto: UpdateLocationDto,
   ): Promise<Location> {
-    await this.findOne(id)
-
-    return await this.prisma.location.update({
+    const existingLocation = await this.prisma.location.findUnique({
       where: {
         id,
       },
+    })
+
+    if (!existingLocation) {
+      throw new NotFoundException('Location does not exist')
+    }
+
+    return await this.prisma.location.update({
+      where: { id },
       data: updateLocationDto,
     })
   }

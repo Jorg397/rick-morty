@@ -29,7 +29,7 @@ export class StatusService {
     return await this.prisma.status.findMany()
   }
 
-  async findOne(id: string) {
+  async findOne(id: string): Promise<Status> {
     const status = await this.prisma.status.findUnique({
       where: {
         id,
@@ -37,7 +37,7 @@ export class StatusService {
     })
 
     if (!status) {
-      throw new NotFoundException('Category not exists')
+      throw new NotFoundException('Status not exists')
     }
 
     return status
