@@ -6,9 +6,22 @@ import { AllEpisodes, EpisodeAPI } from '../models/episode_api.models'
 export class EpisodesApiService {
   private charactersApiUrl = 'https://rickandmortyapi.com/api/episode'
 
-  async getAllEpisodes(): Promise<AllEpisodes> {
+  async getAllEpisodes(): Promise<EpisodeAPI[]> {
+    const episodes = []
+
     const { data } = await axios.get<AllEpisodes>(this.charactersApiUrl)
-    return data
+    episodes.push(...data.results)
+
+    const pages = data.info.pages
+
+    for (let i = 2; i <= pages; i++) {
+      const { data } = await axios.get<AllEpisodes>(
+        `${this.charactersApiUrl}?page=${i}`,
+      )
+      episodes.push(...data.results)
+    }
+
+    return episodes
   }
 
   async getEpisodeById(id: number): Promise<EpisodeAPI> {

@@ -1,0 +1,5 @@
+export * from './dto/create-subcategory.dto'
+export * from './dto/update-subcategory.dto'
+export * from './subcategory.controller'
+export * from './subcategory.module'
+export * from './subcategory.service'

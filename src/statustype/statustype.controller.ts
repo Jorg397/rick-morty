@@ -8,10 +8,12 @@ import {
   Put,
   ValidationPipe,
 } from '@nestjs/common'
+import { ApiTags } from '@nestjs/swagger'
 import { CreateStatustypeDto } from './dto/create-statustype.dto'
 import { UpdateStatustypeDto } from './dto/update-statustype.dto'
 import { StatustypeService } from './statustype.service'
 
+@ApiTags('Statustype')
 @Controller('statustype')
 export class StatustypeController {
   constructor(private readonly statustypeService: StatustypeService) {}

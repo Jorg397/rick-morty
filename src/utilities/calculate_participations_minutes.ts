@@ -1,55 +1,45 @@
-import { PrismaClient } from '@prisma/client'
-import { EpisodeAPI } from '../../src/rick-morty/models/episode_api.models'
-import { CharactersApiService } from '../../src/rick-morty/services'
-import { ParticipationObject } from './mappers'
+import { Participation } from '@prisma/client'
+import { PrismaService } from '../../src/prisma/prisma.service'
+import type { EpisodeAPI } from '../rick-morty/models/episode_api.models'
+import { CharactersApiService } from '../rick-morty/services'
 
-const prisma = new PrismaClient()
+const prisma = new PrismaService()
 
 export async function calculateParticipationsMinutes(
-  episodes: EpisodeAPI[],
-): Promise<ParticipationObject[]> {
+  episode: EpisodeAPI,
+): Promise<Participation[]> {
   const participations = []
-
   const characterApiService = new CharactersApiService()
+  const numCharacters = episode.characters.length
+  const durationPerCharacter = 60 / numCharacters
 
-  for (const episode of episodes) {
-    const { characters } = episode
-    const numCharacters = characters.length
+  for (let i = 0; i < numCharacters; i++) {
+    const character = episode.characters[i]
+    const characterId = Number(character.split('/')[5])
+    const characterInfo = await characterApiService.getCharacterById(
+      characterId,
+    )
+    const obtainDbId = await getDbCharacterId(characterInfo.id)
 
-    // Calcular la duración de participación de cada personaje
-    const durationPerCharacter = 60 / numCharacters
+    const startMinute = Math.floor(i * durationPerCharacter)
+    const startSecond = Math.floor(Math.random() * 60)
+    const endMinute = Math.floor((i + 1) * durationPerCharacter)
+    const endSecond = Math.floor(Math.random() * 60)
 
-    // Iterar sobre cada personaje en el episodio
-    for (let i = 0; i < numCharacters; i++) {
-      const character = characters[i]
-      const characterInfo = await characterApiService.getCharacterById(
-        Number(character.split('/')[5]),
-      )
-
-      // Calcular el tiempo de inicio y finalización de la participación
-      const startMinute = Math.floor(i * durationPerCharacter)
-      const startSecond = Math.floor(Math.random() * 60)
-
-      const endMinute = Math.floor((i + 1) * durationPerCharacter)
-      const endSecond = Math.floor(Math.random() * 60)
-
-      participations.push({
-        characterId: getDbCharacterId(characterInfo.id),
-        startMinute: startMinute,
-        startSecond: startSecond,
-        endMinute: endMinute,
-        endSecond: endSecond,
-      })
-    }
+    participations.push({
+      characterId: obtainDbId,
+      start: `${startMinute}:${startSecond}`,
+      end: `${endMinute}:${endSecond}`,
+    })
   }
 
   return participations
 }
 
-export const getDbCharacterId = async (apiId: number) => {
-  const character = await prisma.character.findFirst({
+export const getDbCharacterId = async (characterId: number) => {
+  const character = await prisma.character.findUnique({
     where: {
-      apiId: apiId,
+      apiId: characterId,
     },
   })
 

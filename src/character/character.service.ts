@@ -4,23 +4,29 @@ import {
   NotFoundException,
 } from '@nestjs/common'
 import { Character, Location } from '@prisma/client'
-import { LocationService } from 'src/location/location.service'
-import { PrismaService } from 'src/prisma/prisma.service'
-import { StatusService } from 'src/status/status.service'
+import { IGetAllResponse } from 'src/models/get_all_response.interface'
+import { PrismaService } from '../prisma/prisma.service'
 import { CreateCharacterDto } from './dto/create-character.dto'
 import { GetQuerysDto } from './dto/get_querys_dto'
 import { UpdateCharacterDto } from './dto/update-character.dto'
 
 @Injectable()
 export class CharacterService {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly statusService: StatusService,
-    private readonly locationService: LocationService,
-  ) {}
+  private _includes = {
+    status: true,
+    location: true,
+    specie: true,
+    participations: true,
+  }
+
+  constructor(private readonly prisma: PrismaService) {}
 
   private async _findLocation(id: string): Promise<Location> {
-    const findLocation = await this.locationService.findOne(id)
+    const findLocation = await this.prisma.location.findUnique({
+      where: {
+        id,
+      },
+    })
     return findLocation
   }
 
@@ -64,25 +70,44 @@ export class CharacterService {
       specieId: createCharacterDto.species,
     }
 
-    return await this.prisma.character.create({ data: characterData })
+    return await this.prisma.character.create({
+      data: characterData,
+      include: this._includes,
+    })
   }
 
-  async findAll(query: GetQuerysDto): Promise<Character[]> {
-    const skip = query.page * 5
+  async findAll(query: GetQuerysDto): Promise<IGetAllResponse<Character>> {
+    const { page, specie, type } = query
+
+    const skip = Number(page) || 1 * 5
     const take = 5
 
-    return await this.prisma.character.findMany({
-      include: {
-        participations: true,
-        location: true,
-        status: true,
-      },
+    const charactersLength = await this.prisma.character.count({
       where: {
-        type: query.type,
-        specieId: query.specie,
+        specieId: specie,
+        type: type,
+      },
+    })
+
+    const characters = await this.prisma.character.findMany({
+      include: this._includes,
+
+      where: {
+        type: type,
+        specieId: specie,
       },
       take,
+      skip,
     })
+
+    return {
+      info: {
+        count: charactersLength,
+        pages: Math.ceil(charactersLength / take),
+        current_page: Number(page) || 1,
+      },
+      results: characters,
+    }
   }
 
   async findOne(id: string): Promise<Character> {
@@ -90,6 +115,7 @@ export class CharacterService {
       where: {
         id,
       },
+      include: this._includes,
     })
 
     if (!findCharacter) {
@@ -122,11 +148,17 @@ export class CharacterService {
         image: updateCharacterDto.image,
         specieId: updateCharacterDto.species,
       },
+
+      include: this._includes,
     })
   }
 
   async remove(id: string): Promise<Character> {
-    const suspendedStatus = await this.statusService.findOne(id)
+    const suspendedStatus = await this.prisma.status.findUnique({
+      where: {
+        status: 'suspended',
+      },
+    })
 
     await this.findOne(id)
     return await this.prisma.character.update({
@@ -134,6 +166,7 @@ export class CharacterService {
       data: {
         statusId: suspendedStatus.id,
       },
+      include: this._includes,
     })
   }
 }

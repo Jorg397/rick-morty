@@ -1,21 +1,20 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
 import { Status } from '@prisma/client'
-import { PrismaService } from 'src/prisma/prisma.service'
-import { StatustypeService } from 'src/statustype/statustype.service'
+import { PrismaService } from '../prisma/prisma.service'
+
 import { CreateStatusDto } from './dto/create-status.dto'
 import { UpdateStatusDto } from './dto/update-status.dto'
 
 @Injectable()
 export class StatusService {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly statusTypeService: StatustypeService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async create(createStatusDto: CreateStatusDto): Promise<Status> {
-    const findStatustype = await this.statusTypeService.findOne(
-      createStatusDto.type,
-    )
+    const findStatustype = await this.prisma.statusType.findUnique({
+      where: {
+        id: createStatusDto.status,
+      },
+    })
 
     return await this.prisma.status.create({
       data: {
@@ -44,15 +43,7 @@ export class StatusService {
   }
 
   async update(id: string, updateStatusDto: UpdateStatusDto): Promise<Status> {
-    const findIfExists = await this.prisma.status.findUnique({
-      where: {
-        id,
-      },
-    })
-
-    if (!findIfExists) {
-      throw new NotFoundException('Status not exists')
-    }
+    await this.findOne(id)
 
     return await this.prisma.status.update({
       where: {

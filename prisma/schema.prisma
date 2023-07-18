@@ -17,7 +17,7 @@ model StatusType {
 }
 
 model Status {
-  id     String      @id @default(uuid()) @map("_id") 
+  id     String      @id @default(uuid()) @map("_id")
   type   StatusType @relation(fields: [typeId], references: [id])
   status String @unique
 
@@ -52,7 +52,7 @@ model Character {
   type           String
   gender         String
   image          String
-  apiId       Int?  @unique
+  apiId           Int?  @unique
   episodes       Episode[]       @relation(fields: [episodeIDs], references: [id])
   location       Location        @relation(name: "location", fields: [locationId], references: [id])
   origin         Location        @relation(name: "origin", fields: [originId], references: [id])

@@ -8,10 +8,12 @@ import {
   Put,
   ValidationPipe,
 } from '@nestjs/common'
+import { ApiTags } from '@nestjs/swagger'
 import { CreateLocationDto } from './dto/create-location.dto'
 import { UpdateLocationDto } from './dto/update-location.dto'
 import { LocationService } from './location.service'
 
+@ApiTags('Location')
 @Controller('location')
 export class LocationController {
   constructor(private readonly locationService: LocationService) {}

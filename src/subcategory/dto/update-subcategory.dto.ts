@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString } from 'class-validator'
+import { IsNotEmpty, IsOptional, IsString } from 'class-validator'
 
 export class UpdateSubcategoryDto {
   @IsString()
@@ -6,6 +6,6 @@ export class UpdateSubcategoryDto {
   subcategory: string
 
   @IsString()
-  @IsNotEmpty()
+  @IsOptional()
   category?: string
 }

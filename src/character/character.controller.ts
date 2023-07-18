@@ -9,11 +9,13 @@ import {
   Query,
   ValidationPipe,
 } from '@nestjs/common'
+import { ApiTags } from '@nestjs/swagger'
 import { CharacterService } from './character.service'
 import { CreateCharacterDto } from './dto/create-character.dto'
 import { GetQuerysDto } from './dto/get_querys_dto'
 import { UpdateCharacterDto } from './dto/update-character.dto'
 
+@ApiTags('Character')
 @Controller('character')
 export class CharacterController {
   constructor(private readonly characterService: CharacterService) {}
@@ -24,7 +26,7 @@ export class CharacterController {
   }
 
   @Get()
-  findAll(@Query() query: GetQuerysDto) {
+  findAll(@Query(new ValidationPipe()) query: GetQuerysDto) {
     return this.characterService.findAll(query)
   }
 

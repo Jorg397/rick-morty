@@ -1,173 +1,299 @@
-import { PrismaClient } from '@prisma/client'
 import {
   CharactersApiService,
   EpisodesApiService,
   LocationsApiService,
 } from '../src/rick-morty/services'
-import { locationMapper, participationMapper } from '../src/utilities'
+
+import { PrismaService } from '../src/prisma/prisma.service'
 import { calculateParticipationsMinutes } from '../src/utilities/calculate_participations_minutes'
 
-const prisma = new PrismaClient()
+const prisma = new PrismaService()
 
 const rickMortyLocationService = new LocationsApiService()
 const rickMortyCharacterService = new CharactersApiService()
 const rickMortyEpisodeService = new EpisodesApiService()
 
 async function main() {
-  const locations = await rickMortyLocationService.getAllLocations()
-  const characters = await rickMortyCharacterService.getAllCharacters()
-  const episodes = await rickMortyEpisodeService.getAllEpisodes()
+  //status ids
+  let characterActiveStatus: string
+  let characterSuspendedStatus: string
 
-  const characterStatusType = await prisma.statusType.create({
-    data: {
-      type: 'Characters',
-    },
-  })
+  let episodeCancelledStatus: string
+  let episodeActiveStatus: string
 
-  const episodeStatusType = await prisma.statusType.create({
-    data: {
-      type: 'Episodes',
-    },
-  })
+  //subcategories ids
+  let specieCategory: string
+  let seasonCategory: string
 
-  const activeStatus = await prisma.status.create({
-    data: {
-      status: 'Active',
-      typeId: characterStatusType.id,
-    },
-  })
+  async function seedLocations() {
+    console.log('Fetching locations from Rick and Morty API...')
+    const locations = await rickMortyLocationService.getAllLocations()
 
-  const suspendedStatus = await prisma.status.create({
-    data: {
-      status: 'Suspended',
-      typeId: characterStatusType.id,
-    },
-  })
+    console.log(`LOCATIONS:`)
 
-  const cancelledStatus = await prisma.status.create({
-    data: {
-      status: 'Cancelled',
-      typeId: episodeStatusType.id,
-    },
-  })
-
-  const activeEpisodeStatus = await prisma.status.create({
-    data: {
-      status: 'Active',
-      typeId: episodeStatusType.id,
-    },
-  })
-
-  await prisma.location.createMany({
-    data: locationMapper(locations),
-  })
-
-  const unkownLocation = await prisma.location.create({
-    data: {
-      name: 'Unknown',
-      dimension: 'unknown',
-      type: 'unknown',
-    },
-  })
-
-  for (const character of characters) {
-    await prisma.character.create({
-      data: {
-        name: character.name,
-        location: {
-          connect: {
-            name:
-              character.location.name === 'unknown'
-                ? unkownLocation.name
-                : character.location.name,
-          },
+    for (const location of locations) {
+      await prisma.location.create({
+        data: {
+          name: location.name,
+          type: location.type,
+          dimension: location.dimension,
         },
-        status: {
-          connect: {
-            status:
-              character.status === 'Alive'
-                ? activeStatus.status
-                : suspendedStatus.status,
-          },
+      })
+
+      console.log(
+        `Created location: ${location.name}, dimension: ${location.dimension}`,
+      )
+    }
+
+    console.log('----------------------------------------------------')
+  }
+
+  async function seedStatuses() {
+    console.log('Creating statuses...')
+
+    const statusTypes = ['characters', 'episodes']
+    let characterStatusType = ''
+    let episodeStatusType = ''
+    const characterStatus = ['active', 'suspended']
+    const episodeStatus = ['cancelled', 'active']
+
+    console.log('STATUSES:')
+    for (const statusType of statusTypes) {
+      const type = await prisma.statusType.create({
+        data: {
+          type: statusType,
         },
-        specie: {
-          connectOrCreate: {
-            where: {
-              subcategory: character.species,
+      })
+
+      if (statusType === 'characters') {
+        characterStatusType = type.id
+      } else {
+        episodeStatusType = type.id
+      }
+
+      console.log(`Created status type: ${type.type}`)
+    }
+
+    for (const status of characterStatus) {
+      const statusCreated = await prisma.status.create({
+        data: {
+          status,
+          typeId: characterStatusType,
+        },
+      })
+
+      if (status === 'active') {
+        characterActiveStatus = statusCreated.id
+      } else {
+        characterSuspendedStatus = statusCreated.id
+      }
+
+      console.log(`Created status: ${statusCreated.status}`)
+    }
+
+    for (const status of episodeStatus) {
+      const statusCreated = await prisma.status.create({
+        data: {
+          status,
+          typeId: episodeStatusType,
+        },
+      })
+
+      if (status === 'cancelled') {
+        episodeCancelledStatus = statusCreated.id
+      } else {
+        episodeActiveStatus = statusCreated.id
+      }
+
+      console.log(`Created status: ${statusCreated.status}`)
+    }
+
+    console.log('----------------------------------------------------')
+  }
+
+  async function seedCategories() {
+    console.log('Creating categories...')
+
+    const categories = ['specie', 'season']
+
+    console.log('CATEGORIES:')
+
+    for (const category of categories) {
+      const categoryCreated = await prisma.category.create({
+        data: {
+          category,
+        },
+      })
+
+      if (category === 'specie') {
+        specieCategory = categoryCreated.id
+      } else {
+        seasonCategory = categoryCreated.id
+      }
+
+      console.log(`Created category: ${categoryCreated.category}`)
+    }
+
+    console.log('----------------------------------------------------')
+  }
+
+  async function seedCharacters() {
+    console.log('Fetching characters from Rick and Morty API...')
+    const characters = await rickMortyCharacterService.getAllCharacters()
+
+    console.log(`CHARACTERS:`)
+    for (const character of characters) {
+      await prisma.character.create({
+        data: {
+          name: character.name,
+          gender: character.gender,
+          image: character.image,
+          type: character.type,
+          apiId: character.id,
+          specie: {
+            connectOrCreate: {
+              where: {
+                subcategory: character.species,
+              },
+              create: {
+                subcategory: character.species,
+                categoryId: specieCategory,
+              },
             },
-            create: {
-              subcategory: character.species,
-              category: {
-                connectOrCreate: {
-                  where: {
-                    category: 'Species',
-                  },
-                  create: {
-                    category: 'Species',
+          },
+          location: {
+            connectOrCreate: {
+              where: {
+                name: character.location.name,
+              },
+              create: {
+                name: character.location.name,
+                dimension: character.location.name,
+                type: character.location.name,
+              },
+            },
+          },
+          origin: {
+            connectOrCreate: {
+              where: {
+                name: character.origin.name,
+              },
+              create: {
+                name: character.origin.name,
+                dimension: character.origin.name,
+                type: character.origin.name,
+              },
+            },
+          },
+          status: {
+            connectOrCreate: {
+              where: {
+                id:
+                  character.status === 'Alive'
+                    ? characterActiveStatus
+                    : characterSuspendedStatus,
+              },
+              create: {
+                status: character.status,
+                type: {
+                  connect: {
+                    type: 'characters',
                   },
                 },
               },
             },
           },
         },
-        gender: character.gender,
-        image: character.image,
-        type: character.type,
-        origin: {
-          connect: {
-            name:
-              character.origin.name === 'unknown'
-                ? unkownLocation.name
-                : character.origin.name,
-          },
-        },
-      },
-    })
+      })
+
+      console.log(
+        `Created character: ${character.name}, location: ${character.location.name}, specie: ${character.species}`,
+      )
+    }
+
+    console.log('----------------------------------------------------')
   }
 
-  for (const episode of episodes.results) {
-    const participations = await calculateParticipationsMinutes([episode])
+  async function seedEpisodes() {
+    console.log('Fetching episodes from Rick and Morty API...')
+    const episodes = await rickMortyEpisodeService.getAllEpisodes()
 
-    const participationsMapped = participations.map((participation) =>
-      participationMapper(participation),
-    )
+    console.log(`EPISODES:`)
+    const findOrCreateSeason = async (season: string) => {
+      const findSeason = await prisma.subCategory.findUnique({
+        where: {
+          subcategory: season,
+        },
+      })
 
-    await prisma.episode.create({
-      data: {
-        airDate: episode.air_date,
-        name: episode.name,
-        episode: episode.episode,
-        duration: 60,
-        status: {
-          connect: {
-            status: activeEpisodeStatus.id,
-          },
+      if (findSeason) {
+        return findSeason
+      }
+
+      const createSeason = await prisma.subCategory.create({
+        data: {
+          subcategory: season,
+          categoryId: seasonCategory,
         },
-        participations: {
-          createMany: {
-            data: participationsMapped,
-          },
+      })
+
+      return createSeason
+    }
+
+    for (const episode of episodes) {
+      const participations = await calculateParticipationsMinutes(episode)
+      const season = await findOrCreateSeason(
+        episode.episode.split('').slice(0, 3).join(''),
+      )
+
+      console.log(`Creating episode: ${episode.name}`)
+
+      const episodeCreated = await prisma.episode.create({
+        data: {
+          name: episode.name,
+          airDate: episode.air_date,
+          episode: episode.episode,
+          duration: 60,
+          seasonId: season.id,
+          statusId: '1c840386-5574-4a8e-b2e5-f869a1481ddf',
         },
-        season: {
-          connectOrCreate: {
-            where: {
-              subcategory: episode.episode.split('').slice(0, 2).join(''),
-            },
-            create: {
-              subcategory: episode.episode.split('').slice(0, 2).join(''),
-              category: {
-                create: {
-                  category: 'Season',
-                },
-              },
-            },
+      })
+      console.log(
+        `Created episode: ${episode.name}, season: ${episode.episode
+          .split('')
+          .slice(0, 3)
+          .join('')}`,
+      )
+
+      console.log('----------------------------------------')
+
+      console.log(`Creating participations for episode: ${episodeCreated.name}`)
+
+      for (const participation of participations) {
+        await prisma.participation.create({
+          data: {
+            episodeId: episodeCreated.id,
+            characterId: participation.characterId,
+            start: participation.start,
+            end: participation.end,
           },
-        },
-      },
-    })
+        })
+
+        console.log(
+          `Created participation for episode: ${episodeCreated.name}, character: ${participation.characterId}`,
+        )
+      }
+    }
+
+    console.log('----------------------------------------------------')
   }
+
+  await seedStatuses()
+  await seedCategories()
+  await seedLocations()
+  await seedCharacters()
+  await seedEpisodes()
 }
-
 main()
   .then(async () => {
     await prisma.$disconnect()
