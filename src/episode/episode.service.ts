@@ -21,8 +21,6 @@ export class EpisodeService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(createEpisodeDto: CreateEpisodeDto) {
-    //no pueden repetirse los nombres en una misma temporada
-
     const existingEpisode = await this.prisma.episode.findUnique({
       where: {
         name: createEpisodeDto.name,
@@ -30,31 +28,25 @@ export class EpisodeService {
       include: this.includes,
     })
 
-    if (existingEpisode.seasonId === createEpisodeDto.season) {
+    if (
+      existingEpisode &&
+      existingEpisode?.season.id === createEpisodeDto.season
+    ) {
       throw new ConflictException(
         `Season ${existingEpisode.season.subcategory} already has an episode with the name ${createEpisodeDto.name}`,
       )
+    } else {
+      return await this.prisma.episode.create({
+        data: {
+          name: createEpisodeDto.name,
+          airDate: createEpisodeDto.airDate,
+          episode: createEpisodeDto.episode,
+          seasonId: createEpisodeDto.season,
+          duration: createEpisodeDto.duration,
+          statusId: createEpisodeDto.status,
+        },
+      })
     }
-
-    return await this.prisma.episode.create({
-      data: {
-        name: createEpisodeDto.name,
-        airDate: createEpisodeDto.airDate,
-        episode: createEpisodeDto.episode,
-        season: {
-          connect: {
-            id: createEpisodeDto.season,
-          },
-        },
-        duration: createEpisodeDto.duration,
-        status: {
-          connect: {
-            id: createEpisodeDto.status,
-          },
-        },
-      },
-      include: this.includes,
-    })
   }
 
   async findAll(query: QueryDto): Promise<IGetAllResponse<Episode>> {
